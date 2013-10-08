@@ -26,7 +26,7 @@ namespace CNC_axis_tester
 		#region places
 
 		/// <summary>
-		/// where the program will stop to get measured by the dial indicator
+		/// where the program will stop to get measured by the dial indicator. Also where the program starts from.
 		/// </summary>
 		private decimal endPoint;
 
@@ -42,6 +42,7 @@ namespace CNC_axis_tester
 
 		#endregion places
 
+		private decimal lastDirection;
 		private Random random;
 
 		/// <summary>
@@ -76,13 +77,16 @@ namespace CNC_axis_tester
 			this.maxVelocityDistance = MaxVelocityDistance(maxVelocity, maxAcceleration);
 
 			// things that could change
-			this.testingAxis = "Y";
+			this.testingAxis = "X";
 			this.minPlayground = 0;
 			this.maxPlayground = 8;
 			this.endPoint = 9;
 
 			this.currentPosition = 0;
 			this.random = new Random();
+
+			// start out heading from end point to the playground
+			this.lastDirection = this.maxPlayground - this.endPoint;
 
 			//this.units = Units.Inches;
 			this.precision = 4;
@@ -186,15 +190,8 @@ namespace CNC_axis_tester
 		/// <returns>-1 if we should jog in negative axis direction, +1 to move in positive axis direction</returns>
 		private decimal chooseDirection()
 		{
-			decimal center = (this.maxPlayground - this.minPlayground) / 2 + this.minPlayground;
-			if (this.currentPosition < center)
-			{
-				return 1;
-			}
-			else
-			{
-				return -1;
-			}
+			this.lastDirection = -this.lastDirection;
+			return this.lastDirection;
 		}
 
 		/// <summary>
