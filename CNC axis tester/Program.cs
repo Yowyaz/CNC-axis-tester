@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using C5;
 
 namespace CNC_axis_tester
 {
@@ -50,7 +51,11 @@ namespace CNC_axis_tester
 		/// </summary>
 		private string testingAxis;
 
+		private ArrayList<decimal> visiting;
+
 		private int precision;
+		private decimal maxVelocity;
+		private decimal maxAcceleration;
 
 		public TestCreator()
 		{
@@ -64,10 +69,10 @@ namespace CNC_axis_tester
 			this.microStepDistance = this.fullStepDistance / numMicrosteps;
 
 			// inches per second
-			decimal maxVelocity = 6.67M;
+			this.maxVelocity = 6.67M;
 
 			// inches per second^2
-			decimal maxAcceleration = 20;
+			this.maxAcceleration = 20M;
 			this.maxVelocityDistance = MaxVelocityDistance(maxVelocity, maxAcceleration);
 
 			// things that could change
@@ -83,6 +88,8 @@ namespace CNC_axis_tester
 			this.lastDirection = this.maxPlayground - this.endPoint;
 
 			this.precision = 4;
+			this.visiting = new ArrayList<decimal>();
+			this.visiting.Add(this.endPoint);
 		}
 
 		private static void Main(string[] args)
@@ -109,6 +116,26 @@ namespace CNC_axis_tester
 			// four full step location ahead or behind the original one.
 		}
 
+		/// <summary>
+		/// Estimate time it will take to jog around.
+		/// </summary>
+		/// <returns>Estimated time in seconds</returns>
+		private void estimateDuration(StreamWriter sw)
+		{
+			decimal total = 0;
+			var current = this.visiting.First;
+			foreach (var dest in this.visiting)
+			{
+				var distance = Math.Abs(current - dest);
+
+				// we'll never move far enough to reach max velocity, so we don't need to worry about that
+				var time = 2 * Math.Sqrt((double)(distance / this.maxAcceleration));
+				total += (decimal)time;
+			}
+
+			sw.WriteLine(string.Format("( estimated run time: {0} ) ", new TimeSpan(0, 0, (int)total)));
+		}
+
 		public void createProgram(string outputPath, int jogs)
 		{
 			using (StreamWriter sw = File.CreateText(outputPath))
@@ -121,8 +148,12 @@ namespace CNC_axis_tester
 				}
 
 				this.rapidTo(sw, this.maxPlayground);
+				this.visiting.Add(this.maxPlayground);
+
 				this.feedTo(sw, this.endPoint, 50);
 				this.epilogue(sw);
+
+				this.estimateDuration(sw);
 			}
 		}
 
@@ -152,6 +183,7 @@ namespace CNC_axis_tester
 
 			this.rapidTo(sw, newPos);
 			this.currentPosition = newPos;
+			this.visiting.Add(this.currentPosition);
 		}
 
 		private string formatPosition(decimal pos)
