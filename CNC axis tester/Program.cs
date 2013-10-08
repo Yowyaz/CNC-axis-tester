@@ -162,7 +162,6 @@ namespace CNC_axis_tester
 
 		private string getMovement(string type, decimal destination)
 		{
-			//G0 X1.1
 			return string.Format("{0} {1}{2}", type, this.testingAxis, this.formatPosition(destination));
 		}
 
@@ -205,6 +204,7 @@ namespace CNC_axis_tester
 			{
 				maxDistance = Math.Abs(this.maxPlayground - this.currentPosition);
 			}
+			maxDistance = Math.Max(maxDistance, this.maxVelocityDistance);
 
 			int minFullSteps = 2;
 			int maxFullSteps = (int)Math.Floor(maxDistance / this.fullStepDistance);
