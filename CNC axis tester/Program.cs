@@ -50,12 +50,6 @@ namespace CNC_axis_tester
 		/// </summary>
 		private string testingAxis;
 
-		//private enum Units
-		//{
-		//	Inches,
-		//	Millimeters
-		//}
-		//private Units units;
 		private int precision;
 
 		public TestCreator()
@@ -88,7 +82,6 @@ namespace CNC_axis_tester
 			// start out heading from end point to the playground
 			this.lastDirection = this.maxPlayground - this.endPoint;
 
-			//this.units = Units.Inches;
 			this.precision = 4;
 		}
 
