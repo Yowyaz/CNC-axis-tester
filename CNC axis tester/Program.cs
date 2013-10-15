@@ -57,7 +57,7 @@ namespace CNC_axis_tester
 		private decimal maxVelocity;
 		private decimal maxAcceleration;
 
-		public TestCreator()
+		public TestCreator(decimal maxVelocity, decimal maxAcceleration)
 		{
 			// all units in inches
 			decimal stepsPerRevolution = 200;
@@ -68,18 +68,16 @@ namespace CNC_axis_tester
 			this.fullStepDistance = 1 / (stepsPerRevolution * gearReduction / pinionCircumference);
 			this.microStepDistance = this.fullStepDistance / numMicrosteps;
 
-			// inches per second
-			this.maxVelocity = 6.67M;
-
-			// inches per second^2
-			this.maxAcceleration = 20M;
+			// units of inches/second or second^2
+			this.maxVelocity = maxVelocity;
+			this.maxAcceleration = maxAcceleration;
 			this.maxVelocityDistance = MaxVelocityDistance(maxVelocity, maxAcceleration);
 
 			// things that could change
 			this.testingAxis = "X";
 			this.minPlayground = 0;
-			this.maxPlayground = 8;
-			this.endPoint = 9;
+			this.endPoint = 18.5M;
+			this.maxPlayground = this.endPoint - 1;
 
 			this.currentPosition = 0;
 			this.random = new Random();
@@ -94,11 +92,16 @@ namespace CNC_axis_tester
 
 		private static void Main(string[] args)
 		{
-			for (int i = 3; i < 11; i++)
+			foreach (var vel in new decimal[] { 6.7M, 9, 12 })
 			{
-				int jogs = 1 << i;
-				TestCreator tc = new TestCreator();
-				tc.createProgram(string.Format("xtest{0,4}.ngc", jogs), jogs);
+				foreach (var acc in new decimal[] { 20, 25, 30 })
+				{
+					foreach (var jog in new int[]{8,128,256})
+					{
+						TestCreator tc = new TestCreator(vel, acc);
+						tc.createProgram(string.Format("xtest{0,4} {1}a.ngc", jog, tc.VelAccel), jog);
+					}
+				}
 			}
 
 			// The hypothesis is that we're commanding the CNC to stop at microsteps and it can't so it slides over to the
@@ -115,6 +118,8 @@ namespace CNC_axis_tester
 			// original location, beyond which it weakens and reverses at the two full step position to attract the shaft to a
 			// four full step location ahead or behind the original one.
 		}
+
+		public string VelAccel { get { return string.Format("{0:F2}v {1:F1}a", this.maxVelocity, this.maxAcceleration); } }
 
 		/// <summary>
 		/// Estimate time it will take to jog around.
@@ -236,15 +241,15 @@ namespace CNC_axis_tester
 			{
 				maxDistance = Math.Abs(this.maxPlayground - this.currentPosition);
 			}
-			maxDistance = Math.Max(maxDistance, this.maxVelocityDistance);
 
-			int minFullSteps = 2;
-			int maxFullSteps = (int)Math.Floor(maxDistance / this.fullStepDistance);
-			decimal fullSteps = this.random.Next(minFullSteps, maxFullSteps + 1);
+			double maxMult = 1.1;
+			double minMult = 0.9;
+			var diff = maxMult - minMult;
+			var mult = this.random.NextDouble() * diff + minMult;
+			decimal idealDistance = (decimal)mult * this.maxVelocityDistance;
+			var actualDistance = Math.Min(maxDistance, idealDistance);
 
-			int microSteps = this.random.Next(1, 10);
-
-			return direction * fullSteps * this.fullStepDistance + microSteps * this.microStepDistance;
+			return direction * actualDistance;
 		}
 
 		/// <summary>
@@ -252,7 +257,9 @@ namespace CNC_axis_tester
 		/// </summary>
 		private decimal MaxVelocityDistance(decimal maxVel, decimal maxAccel)
 		{
-			return maxVel * maxVel / maxAccel;
+			// I'm not sure... but the GUI doesn't display max velocity without fudge
+			decimal fudge = 1.7M;
+			return maxVel * maxVel / maxAccel * fudge;
 		}
 	}
 }
